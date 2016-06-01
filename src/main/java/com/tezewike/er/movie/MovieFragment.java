@@ -28,7 +28,6 @@ import com.squareup.picasso.Picasso;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.w3c.dom.Text;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -294,6 +293,10 @@ public class MovieFragment extends Fragment {
         private MovieData[] parseMovieJson(String jsonData, boolean fromFile)
                 throws JSONException {
 
+            if (jsonData == null) {
+                return null;
+            }
+
             if (!fromFile) {
                 // If this data wasn't from the file, write to the file.
                 customJsonUtils.writeToFile(movie_data_file, jsonData);
@@ -496,6 +499,3 @@ public class MovieFragment extends Fragment {
     }
 
 }
-
-
-

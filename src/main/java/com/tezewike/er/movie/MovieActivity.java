@@ -26,6 +26,7 @@ public class MovieActivity extends AppCompatActivity
 
         toolbar = (Toolbar) findViewById(R.id.movie_toolbar);
         setSupportActionBar(toolbar);
+        toolbar.setTitle("Home");
 
         tabLayout = (TabLayout) findViewById(R.id.movie_tablayout);
         viewPager = (ViewPager) findViewById(R.id.movie_viewpager);
