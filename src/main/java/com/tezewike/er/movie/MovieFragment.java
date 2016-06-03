@@ -7,6 +7,7 @@ import com.tezewike.er.utils.*;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -176,6 +177,7 @@ public class MovieFragment extends Fragment {
         ProgressDialog dialogLoad = new ProgressDialog(getActivity());
         String LOG_TAG = FetchMovieData.class.getSimpleName();
 
+        MovieDbHelper movieSQLDb = new MovieDbHelper(getActivity());
         CustomJsonUtils customJsonUtils = new CustomJsonUtils(getActivity());
         String movie_data_file = "movie_data.txt";
 
@@ -320,7 +322,7 @@ public class MovieFragment extends Fragment {
             int len = moviesJSON.length();
 
             // Place data into arrays
-             movies = new MovieData[len];
+            movies = new MovieData[len];
 
             String[] titles = new String[len];
             String[] posters = new String[len];
@@ -338,11 +340,15 @@ public class MovieFragment extends Fragment {
                 release[i] = movie.getString(RELEASE);
                 vote[i] = movie.getString(VOTE);
 
-               movies[i] = new MovieData(titles[i], posters[i], backdrops[i], descriptions[i],
-                       release[i], vote[i]);
+ //               movies[i] = new MovieData(titles[i], posters[i], backdrops[i], descriptions[i],
+   //                    release[i], vote[i]);
+
+                movieSQLDb.putInformation(movieSQLDb, param, i, titles[i],
+                        vote[i], release[i], posters[i], backdrops[i], descriptions[i]);
             }
 
-            return movies;
+            return null;
+         //   return movies;
         }
 
         @Override
@@ -398,6 +404,24 @@ public class MovieFragment extends Fragment {
                 for (MovieData movie : movies) {
                     mMovieData.add(movie);
                 }
+                movieAdapter = new MovieAdapter(getActivity(), mMovieData, param);
+                mRecyclerView.setAdapter(movieAdapter);
+            } else {
+                mMovieData.clear();
+                Cursor cursor = movieSQLDb.getInformation(movieSQLDb, param, null);
+                cursor.moveToFirst();
+                MovieData m;
+                do {
+                    mMovieData.add( new MovieData(
+                            cursor.getString(1),
+                            cursor.getString(4),
+                            cursor.getString(5),
+                            cursor.getString(6),
+                            cursor.getString(3),
+                            cursor.getString(2)
+                    ));
+                } while (cursor.moveToNext());
+
                 movieAdapter = new MovieAdapter(getActivity(), mMovieData, param);
                 mRecyclerView.setAdapter(movieAdapter);
             }
