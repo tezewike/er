@@ -1,13 +1,11 @@
 package com.tezewike.er.movie;
 
 
-import com.tezewike.er.*;
-import com.tezewike.er.utils.*;
-
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteException;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -25,6 +23,9 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.squareup.picasso.Picasso;
+import com.tezewike.er.BuildConfig;
+import com.tezewike.er.R;
+import com.tezewike.er.utils.CustomJsonUtils;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -42,12 +43,11 @@ import java.util.List;
  * A simple {@link Fragment} subclass.
  */
 public class MovieFragment extends Fragment {
+    private String LOG_TAG = MovieFragment.class.getSimpleName();
 
     private OnMovieSelectedListener itemListener;
-    private MovieData[] movies;
-    private List<MovieData> mMovieData = new ArrayList<>();
+    private Cursor mCursor;
 
-    private Button button;
     private RecyclerView mRecyclerView;
     private RecyclerView.Adapter movieAdapter;
     private RecyclerView.LayoutManager mLayoutManager;
@@ -56,7 +56,7 @@ public class MovieFragment extends Fragment {
 
     // Container Activity must implement this interface
     public interface OnMovieSelectedListener {
-        public void onMovieSelected(MovieData[] selectedMovie, boolean one);
+        void onMovieSelected(String cursorId, String param);
     }
 
     public MovieFragment() {
@@ -82,18 +82,18 @@ public class MovieFragment extends Fragment {
         // Get parameters for ASyncTask from bundle
         param = getArguments().getString("param");
 
-        if (param == null) {
-            // do nothing
-        } else if (param.equals("recent")) {
-            // use a grid layout manager
-            int columns = 2;
-            mLayoutManager = new GridLayoutManager(getActivity(), columns);
-        } else if (param.equals("popular")) {
-            // use a linear layout manager
-            mLayoutManager = new LinearLayoutManager(getActivity());
-        }
+        if (param != null) {
+            if (param.equals("recent")) {
+                // use a grid layout manager
+                int columns = 2;
+                mLayoutManager = new GridLayoutManager(getActivity(), columns);
+            } else if (param.equals("popular")) {
+                // use a linear layout manager
+                mLayoutManager = new LinearLayoutManager(getActivity());
+            }
 
-        updateMovies(param);
+            updateMovies(param);
+        }
     }
 
     @Override
@@ -121,22 +121,24 @@ public class MovieFragment extends Fragment {
         // Inflate the layout for this fragment
         View rootView = inflater.inflate(R.layout.fragment_movie, container, false);
 
-        // Create a DrigView
+        // Create a GridView
         mRecyclerView = (RecyclerView) rootView.findViewById(R.id.movie_recyclerview);
 
         // The LayoutManager is set in OnCreate
         mRecyclerView.setLayoutManager(mLayoutManager);
 
-        // specify an adapter (see also next example)
-        movieAdapter = new MovieAdapter(getActivity(),mMovieData, param);
-        mRecyclerView.setAdapter(movieAdapter);
+        // specify an adapter
+        if (mCursor != null) {
+            movieAdapter = new MovieAdapter(getActivity(), mCursor, param);
+            mRecyclerView.setAdapter(movieAdapter);
+        }
 
-        button = (Button) rootView.findViewById(R.id.shuffle_button);
+        Button button = (Button) rootView.findViewById(R.id.shuffle_button);
 
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                itemListener.onMovieSelected(movies, false);
+                itemListener.onMovieSelected(null, param);
             }
         });
 
@@ -172,14 +174,13 @@ public class MovieFragment extends Fragment {
         itemListener = null;
     }
 
-    private class FetchMovieData extends AsyncTask<String, Void, MovieData[]> {
-
-        ProgressDialog dialogLoad = new ProgressDialog(getActivity());
+    private class FetchMovieData extends AsyncTask<String, Void, Boolean> {
         String LOG_TAG = FetchMovieData.class.getSimpleName();
+        String TAB_TAG = param + " tab: ";
 
         MovieDbHelper movieSQLDb = new MovieDbHelper(getActivity());
         CustomJsonUtils customJsonUtils = new CustomJsonUtils(getActivity());
-        String movie_data_file = "movie_data.txt";
+        ProgressDialog dialogLoad = new ProgressDialog(getActivity());
 
         private String[] getTimes(int wks) {
 
@@ -276,34 +277,27 @@ public class MovieFragment extends Fragment {
         }
 
         private String getImageURL(String urlPath, boolean poster) {
-            String width;
             String base = "http://image.tmdb.org/t/p/w";
+            String width;
 
-            if (urlPath == null) {
-                return null;
+            if (urlPath.equals("null")) {
+                return urlPath;
             }
 
             if (poster) {
                 width = "185";
             } else {
+                // Used for the backdrop
                 width = "500";
             }
 
             return base + width + urlPath;
         }
 
-        private MovieData[] parseMovieJson(String jsonData, boolean fromFile)
-                throws JSONException {
+        private boolean parseMovieJson(String jsonData) throws JSONException {
 
             if (jsonData == null) {
-                return null;
-            }
-
-            if (!fromFile) {
-                // If this data wasn't from the file, write to the file.
-                customJsonUtils.writeToFile(movie_data_file, jsonData);
-            } else {
-                Log.v(LOG_TAG, "Data found. Attempting to parse json data.");
+                return false;
             }
 
             JSONObject data = new JSONObject(jsonData);
@@ -322,8 +316,6 @@ public class MovieFragment extends Fragment {
             int len = moviesJSON.length();
 
             // Place data into arrays
-            movies = new MovieData[len];
-
             String[] titles = new String[len];
             String[] posters = new String[len];
             String[] backdrops = new String[len];
@@ -340,90 +332,77 @@ public class MovieFragment extends Fragment {
                 release[i] = movie.getString(RELEASE);
                 vote[i] = movie.getString(VOTE);
 
- //               movies[i] = new MovieData(titles[i], posters[i], backdrops[i], descriptions[i],
-   //                    release[i], vote[i]);
-
-                movieSQLDb.putInformation(movieSQLDb, param, i, titles[i],
+                movieSQLDb.putInformation(param, i, titles[i],
                         vote[i], release[i], posters[i], backdrops[i], descriptions[i]);
             }
 
-            return null;
-         //   return movies;
+            Log.e(LOG_TAG, TAB_TAG + "Data inserted into table.");
+
+            return true;
+        }
+
+        private boolean isOldInformation() {
+            try {
+                return movieSQLDb.compareDateInformation(param);
+            } catch (SQLiteException e) {
+                Log.v(LOG_TAG, "No table(s) currently exist.");
+                return false;
+            }
         }
 
         @Override
         protected void onPreExecute() {
-            dialogLoad.setMessage("Downloading Movie List");
+            dialogLoad.setMessage("Loading Movie List");
             dialogLoad.setCancelable(false);
             dialogLoad.setInverseBackgroundForced(false);
             dialogLoad.show();
         }
 
         @Override
-        protected MovieData[] doInBackground(String... params) {
-            Log.v("doInBackground","ran");
-            URL jsonURL;
+        protected Boolean doInBackground(String... params) {
+            Log.v(LOG_TAG, TAB_TAG + "doInBackground: Running...");
+
             String RECENT_PARAM = "recent";
             String POPULAR_PARAM = "popular";
 
-            String data = "";
-                    // customJsonUtils.readFromFile(movie_data_file);
-
-            if (!data.equals("")) {
-                try {
-                    return parseMovieJson(data, true);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+            if (isOldInformation()) {
+                // If the information isn't new, end the process
+                Log.v(LOG_TAG, TAB_TAG + "Previous data found.");
+                return true;
+            } else {
+                Log.v(LOG_TAG, TAB_TAG + "Either old, or no, previous data found.");
             }
 
             // If the above failed, try to obtain data from the web
+            URL jsonURL;
             if (params[0].equals(RECENT_PARAM)) {
                 jsonURL = getRecentMoviesURL();
             } else if (params[0].equals(POPULAR_PARAM)) {
                 jsonURL = getPopularMoviesURL();
             } else {
-                return null;
+                return false;
             }
 
-            data = customJsonUtils.getJsonString(jsonURL);
+            String data = customJsonUtils.getJsonString(jsonURL);
             try {
-                return parseMovieJson(data, false);
+                return parseMovieJson(data);
             } catch (JSONException e) {
                 e.printStackTrace();
             }
 
-            // If all the above methods failed, return null
-            return null;
+            // If all the above methods failed, return false
+            return false;
         }
 
         @Override
-        protected void onPostExecute(MovieData[] results) {
-            if (results != null) {
-                mMovieData.clear();
-                for (MovieData movie : movies) {
-                    mMovieData.add(movie);
-                }
-                movieAdapter = new MovieAdapter(getActivity(), mMovieData, param);
-                mRecyclerView.setAdapter(movieAdapter);
-            } else {
-                mMovieData.clear();
-                Cursor cursor = movieSQLDb.getInformation(movieSQLDb, param, null);
-                cursor.moveToFirst();
-                MovieData m;
-                do {
-                    mMovieData.add( new MovieData(
-                            cursor.getString(1),
-                            cursor.getString(4),
-                            cursor.getString(5),
-                            cursor.getString(6),
-                            cursor.getString(3),
-                            cursor.getString(2)
-                    ));
-                } while (cursor.moveToNext());
+        protected void onPostExecute(Boolean results) {
+            Log.v(LOG_TAG, TAB_TAG + "onPostExecute: Finishing tasks...");
 
-                movieAdapter = new MovieAdapter(getActivity(), mMovieData, param);
+            if (results != null) {
+                mCursor = movieSQLDb.getInformation(param, null);
+                movieAdapter = new MovieAdapter(getActivity(), mCursor, param);
                 mRecyclerView.setAdapter(movieAdapter);
+                movieSQLDb.close();
             }
 
             // End the Loading dialogLoad box
@@ -435,10 +414,9 @@ public class MovieFragment extends Fragment {
     class MovieAdapter extends RecyclerView.Adapter<MovieAdapter.ViewHolder> {
         protected Context mContext;
         protected String parameter;
-        protected List<MovieData> mMovies = new ArrayList<MovieData>();
+        protected List<MovieData> mMovies = new ArrayList<>();
 
-        public class ViewHolder extends RecyclerView.ViewHolder
-                implements View.OnClickListener {
+        public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
 
             public TextView movieTitle;
             public ImageView posterImage;
@@ -464,17 +442,14 @@ public class MovieFragment extends Fragment {
             @Override
             public void onClick(View view) {
                 int position = getPosition();
-
-                MovieData[] selectedMovie = new MovieData[1];
-                selectedMovie[0] = movies[position];
-                itemListener.onMovieSelected(selectedMovie, true);
+                itemListener.onMovieSelected(""+position, param);
             }
 
         }
 
-        public MovieAdapter(Context c, List<MovieData> movies, String param) {
+        public MovieAdapter(Context c, Cursor movieCursor, String param) {
             this.mContext = c;
-            this.mMovies = movies;
+            this.mMovies = getMovieData(movieCursor);
             this.parameter = param;
         }
 
@@ -492,9 +467,7 @@ public class MovieFragment extends Fragment {
                 return null;
             }
 
-            ViewHolder viewHolder = new ViewHolder(convertView);
-
-            return viewHolder;
+            return new ViewHolder(convertView);
         }
 
         @Override
@@ -518,6 +491,35 @@ public class MovieFragment extends Fragment {
         @Override
         public int getItemCount() {
             return mMovies.size();
+        }
+
+        private List<MovieData> getMovieData(Cursor cursor) {
+            List<MovieData> list = new ArrayList<>();
+
+            int col_title = cursor.getColumnIndex(MovieContract.MovieEntry.MOVIE_NAME);
+            int col_poster = cursor.getColumnIndex(MovieContract.MovieEntry.POSTER_URL);
+            int col_backdrop = cursor.getColumnIndex(MovieContract.MovieEntry.BACKDROP_URL);
+            int col_descript = cursor.getColumnIndex(MovieContract.MovieEntry.DESCRIPTION);
+            int col_vote = cursor.getColumnIndex(MovieContract.MovieEntry.VOTE_AVERAGE);
+            int col_release = cursor.getColumnIndex(MovieContract.MovieEntry.RELEASE_DATE);
+
+            cursor.moveToFirst();
+            do {
+                list.add( new MovieData(
+                        cursor.getString(col_title),
+                        cursor.getString(col_poster),
+                        cursor.getString(col_backdrop),
+                        cursor.getString(col_descript),
+                        cursor.getString(col_release),
+                        cursor.getString(col_vote)
+                    )
+                );
+
+            } while (cursor.moveToNext());
+
+            cursor.close();
+
+            return list;
         }
 
     }

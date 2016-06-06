@@ -1,19 +1,18 @@
 package com.tezewike.er.movie;
 
+
 import android.provider.BaseColumns;
 
-/**
- * Created by Tobe on 6/2/2016.
- */
-public class MovieTable {
+
+public class MovieContract {
 
     public static final String DATABASE_NAME = "movie.db";
 
     public static abstract class MovieEntry implements BaseColumns {
 
         // Table Names
-        public static final String TABLE_NAME_RECENT = "movie_recent_table";
-        public static final String TABLE_NAME_POPULAR = "movie_popular_table";
+        public static final String TABLE_NAME_RECENT = "recent";
+        public static final String TABLE_NAME_POPULAR = "popular";
 
         // Parameter names
         public static final String ID = "id";

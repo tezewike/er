@@ -1,8 +1,7 @@
 package com.tezewike.er.movie;
 
 
-import com.tezewike.er.*;
-
+import android.database.Cursor;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
@@ -12,6 +11,10 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.squareup.picasso.Picasso;
+import com.tezewike.er.R;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -19,6 +22,8 @@ import com.squareup.picasso.Picasso;
  * Activities that contain this fragment must implement the
  */
 public class MovieDetailFragment extends Fragment {
+    Cursor mCursor;
+    MovieDbHelper movieSQLDb;
     MovieData movie;
 
     public MovieDetailFragment() {
@@ -30,8 +35,13 @@ public class MovieDetailFragment extends Fragment {
         super.onCreate(savedInstanceState);
 
         Bundle data = getArguments();
-        // Get movie data from bundle
-        movie = (MovieData) data.getParcelable("movie");
+        String id = data.getString("movie");
+        String parameter = data.getString("param");
+
+        movieSQLDb = new MovieDbHelper(getActivity());
+
+        mCursor = movieSQLDb.getInformation(parameter, id);
+        movie = getMovieData(mCursor).get(0);
     }
 
     @Override
@@ -74,6 +84,24 @@ public class MovieDetailFragment extends Fragment {
             backdrop = (ImageView) v.findViewById(R.id.movie_detail_backdrop);
             poster = (ImageView) v.findViewById(R.id.movie_detail_poster);
         }
+    }
+
+    private List<MovieData> getMovieData(Cursor cursor) {
+        List<MovieData> list = new ArrayList<>();
+        cursor.moveToFirst();
+        do {
+            list.add( new MovieData(
+                    cursor.getString(1),
+                    cursor.getString(4),
+                    cursor.getString(5),
+                    cursor.getString(6),
+                    cursor.getString(3),
+                    cursor.getString(2)));
+        } while (cursor.moveToNext());
+
+        cursor.close();
+
+        return list;
     }
 
 }
