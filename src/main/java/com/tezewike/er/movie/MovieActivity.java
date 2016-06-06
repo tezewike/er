@@ -1,9 +1,9 @@
 package com.tezewike.er.movie;
 
 
+import android.os.Bundle;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.Fragment;
-import android.os.Bundle;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -41,11 +41,12 @@ public class MovieActivity extends AppCompatActivity
     }
 
     @Override
-    public void onMovieSelected(MovieData[] movieData, boolean isItemClick) {
+    public void onMovieSelected(String id, String param) {
         Bundle bundle = new Bundle();
+        bundle.putString("param", param);
 
-        if (isItemClick) {
-            bundle.putParcelable("movie", movieData[0]);
+        if (id != null) {
+            bundle.putString("movie", id);
             Fragment detailFragment = new MovieDetailFragment();
             detailFragment.setArguments(bundle);
             getSupportFragmentManager().beginTransaction()
@@ -53,7 +54,7 @@ public class MovieActivity extends AppCompatActivity
                     .addToBackStack("frag1")
                     .commit();
         } else {
-            bundle.putParcelableArray("movies", movieData);
+            bundle.putString("movies", null);
             Fragment shuffleFragment = new ShuffleFragment();
             shuffleFragment.setArguments(bundle);
             getSupportFragmentManager().beginTransaction()

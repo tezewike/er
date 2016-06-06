@@ -1,20 +1,22 @@
 package com.tezewike.er.movie;
 
 
-import com.squareup.picasso.Picasso;
-import com.tezewike.er.*;
-
 import android.app.Activity;
+import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.squareup.picasso.Picasso;
+import com.tezewike.er.R;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 
@@ -23,7 +25,11 @@ import java.util.Random;
  */
 public class ShuffleFragment extends Fragment {
     MovieFragment.OnMovieSelectedListener itemListener;
-    MovieData[] movies;
+    Cursor mCursor;
+    MovieDbHelper movieSQLDb = new MovieDbHelper(getActivity());
+    List<MovieData> movies;
+    String parameter;
+
 
     public ShuffleFragment() {
         // Required empty public constructor
@@ -34,7 +40,11 @@ public class ShuffleFragment extends Fragment {
         super.onCreate(savedInstanceState);
         Bundle data = getArguments();
         // Get movie data from bundle
-        movies = (MovieData[]) data.getParcelableArray("movies");
+        String id = data.getString("movie");
+        parameter = data.getString("param");
+
+        mCursor = movieSQLDb.getInformation(parameter, id);
+        movies = getMovieData(mCursor);
     }
 
     @Override
@@ -55,8 +65,8 @@ public class ShuffleFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 MovieData[] selectedMovie = new MovieData[1];
-                selectedMovie[0] = movies[position[0]];
-                itemListener.onMovieSelected(selectedMovie, true);
+                selectedMovie[0] = movies.get(position[0]);
+                itemListener.onMovieSelected(""+position[0], parameter);
             }
         });
 
@@ -67,15 +77,15 @@ public class ShuffleFragment extends Fragment {
             @Override
             public void run() {
                 if (initial < 750) {
-                    position[0] = randInt(movies.length);
-                    holder.title.setText(movies[position[0]].title);
+                    position[0] = randInt(movies.size());
+                    holder.title.setText(movies.get(position[0]).title);
 
                     initial = (long) (initial * 1.15);
                 } else {
                     while (!visibility) {
                         holder.image.setVisibility(View.VISIBLE);
                         Picasso.with(getActivity())
-                                .load(movies[position[0]].poster)
+                                .load(movies.get(position[0]).poster)
                                 .into(holder.image);
                         visibility = true;
                     }
@@ -114,6 +124,24 @@ public class ShuffleFragment extends Fragment {
     public static int randInt(int max) {
         Random rand = new Random();
         return rand.nextInt(max);
+    }
+
+    private List<MovieData> getMovieData(Cursor cursor) {
+        List<MovieData> list = new ArrayList<>();
+        cursor.moveToFirst();
+        do {
+            list.add( new MovieData(
+                    cursor.getString(1),
+                    cursor.getString(4),
+                    cursor.getString(5),
+                    cursor.getString(6),
+                    cursor.getString(3),
+                    cursor.getString(2)));
+        } while (cursor.moveToNext());
+
+        cursor.close();;
+
+        return list;
     }
 
 }
