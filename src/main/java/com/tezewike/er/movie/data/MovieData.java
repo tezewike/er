@@ -1,4 +1,4 @@
-package com.tezewike.er.movie;
+package com.tezewike.er.movie.data;
 
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -68,7 +68,8 @@ public class MovieData implements Parcelable {
                 month = Integer.parseInt(date[1]);
                 day = Integer.parseInt(date[2]);
             } catch (NumberFormatException e) {
-
+                return null;
+            } catch (IndexOutOfBoundsException e) {
                 return null;
             }
         } else {

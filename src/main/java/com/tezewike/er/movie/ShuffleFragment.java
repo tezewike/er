@@ -14,6 +14,8 @@ import android.widget.TextView;
 
 import com.squareup.picasso.Picasso;
 import com.tezewike.er.R;
+import com.tezewike.er.movie.data.MovieData;
+import com.tezewike.er.movie.data.MovieDbHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +26,7 @@ import java.util.Random;
  * A simple {@link Fragment} subclass.
  */
 public class ShuffleFragment extends Fragment {
-    MovieFragment.OnMovieSelectedListener itemListener;
+    MovieRecentFragment.OnMovieSelectedListener itemListener;
     Cursor mCursor;
     MovieDbHelper movieSQLDb = new MovieDbHelper(getActivity());
     List<MovieData> movies;
@@ -113,10 +115,10 @@ public class ShuffleFragment extends Fragment {
     public void onAttach(Activity activity) {
         super.onAttach(activity);
         try {
-            itemListener = (MovieFragment.OnMovieSelectedListener) activity;
+            itemListener = (MovieRecentFragment.OnMovieSelectedListener) activity;
         } catch (ClassCastException e) {
             throw new ClassCastException(activity.toString() +
-                    " must implement MovieFragment.OnOptionSelectedListener");
+                    " must implement MovieRecentFragment.OnOptionSelectedListener");
         }
 
     }

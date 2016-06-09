@@ -12,12 +12,14 @@ import com.tezewike.er.R;
 import com.tezewike.er.utils.ViewPagerAdapter;
 
 public class MovieActivity extends AppCompatActivity
-        implements MovieFragment.OnMovieSelectedListener {
+        implements MovieRecentFragment.OnMovieSelectedListener,
+                   MoviePopularFragment.OnMovieSelectedListener {
 
     Toolbar toolbar;
     TabLayout tabLayout;
     ViewPager viewPager;
     ViewPagerAdapter mAdapter;
+    boolean twoPaneActivity;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,17 +28,28 @@ public class MovieActivity extends AppCompatActivity
 
         toolbar = (Toolbar) findViewById(R.id.movie_toolbar);
         setSupportActionBar(toolbar);
-        toolbar.setTitle("Home");
 
         tabLayout = (TabLayout) findViewById(R.id.movie_tablayout);
         viewPager = (ViewPager) findViewById(R.id.movie_viewpager);
 
         mAdapter = new ViewPagerAdapter(getSupportFragmentManager());
-        mAdapter.addFragment(MovieFragment.newInstance("recent"), "New Releases");
-        mAdapter.addFragment(MovieFragment.newInstance("popular"), "Popular Now");
-
+        mAdapter.addFragment(new MovieRecentFragment(), "New Releases");
+        mAdapter.addFragment(new MoviePopularFragment(), "Popular Now");
         viewPager.setAdapter(mAdapter);
         tabLayout.setupWithViewPager(viewPager);
+
+        if (findViewById(R.id.movie_detail_container) != null) {
+            twoPaneActivity = true;
+            if (savedInstanceState == null) {
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.movie_detail_container, new MovieDetailFragment())
+                        .addToBackStack("frag1")
+                        .commit();
+            }
+
+        } else {
+            twoPaneActivity = false;
+        }
 
     }
 
@@ -44,15 +57,24 @@ public class MovieActivity extends AppCompatActivity
     public void onMovieSelected(String id, String param) {
         Bundle bundle = new Bundle();
         bundle.putString("param", param);
+        int layout;
 
         if (id != null) {
             bundle.putString("movie", id);
             Fragment detailFragment = new MovieDetailFragment();
             detailFragment.setArguments(bundle);
+
+            if (twoPaneActivity) {
+                layout = R.id.movie_detail_container;
+            } else {
+                layout = android.R.id.content;
+            }
+
             getSupportFragmentManager().beginTransaction()
-                    .replace(android.R.id.content, detailFragment)
+                    .replace(layout, detailFragment)
                     .addToBackStack("frag1")
                     .commit();
+
         } else {
             bundle.putString("movies", null);
             Fragment shuffleFragment = new ShuffleFragment();

@@ -1,4 +1,4 @@
-package com.tezewike.er.movie;
+package com.tezewike.er.movie.data;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -8,7 +8,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
-import com.tezewike.er.movie.MovieContract.MovieEntry;
+import com.tezewike.er.movie.data.MovieContract.MovieEntry;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;

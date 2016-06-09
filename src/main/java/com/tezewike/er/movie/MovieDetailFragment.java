@@ -12,6 +12,8 @@ import android.widget.TextView;
 
 import com.squareup.picasso.Picasso;
 import com.tezewike.er.R;
+import com.tezewike.er.movie.data.MovieData;
+import com.tezewike.er.movie.data.MovieDbHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,13 +37,17 @@ public class MovieDetailFragment extends Fragment {
         super.onCreate(savedInstanceState);
 
         Bundle data = getArguments();
-        String id = data.getString("movie");
-        String parameter = data.getString("param");
+        try {
+            String id = data.getString("movie");
+            String parameter = data.getString("param");
+            movieSQLDb = new MovieDbHelper(getActivity());
 
-        movieSQLDb = new MovieDbHelper(getActivity());
+            mCursor = movieSQLDb.getInformation(parameter, id);
+            movie = getMovieData(mCursor).get(0);
+        } catch (NullPointerException e) {
+            return;
+        }
 
-        mCursor = movieSQLDb.getInformation(parameter, id);
-        movie = getMovieData(mCursor).get(0);
     }
 
     @Override
@@ -49,6 +55,10 @@ public class MovieDetailFragment extends Fragment {
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View rootView = inflater.inflate(R.layout.fragment_movie_detail, container, false);
+
+        if (movie == null) {
+            return rootView;
+        }
 
         ViewHolder holder = new ViewHolder(rootView);
 

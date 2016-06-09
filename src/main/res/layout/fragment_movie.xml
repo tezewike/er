@@ -1,7 +1,5 @@
 <RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    tools:context=".movie.MovieFragment"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:scrollbars="none"
@@ -9,7 +7,7 @@
 
     <android.support.v7.widget.RecyclerView
         android:listSelector="@android:color/transparent"
-        android:id="@+id/movie_recyclerview"
+        android:id="@+id/movie_recyclerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:stretchMode="columnWidth"
