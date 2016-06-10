@@ -1,11 +1,11 @@
 package com.tezewike.er.steam;
 
 import android.app.Activity;
+import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.app.Fragment;
 import android.os.Bundle;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -18,17 +18,12 @@ import android.widget.ImageView;
 import com.squareup.picasso.Picasso;
 import com.tezewike.er.BuildConfig;
 import com.tezewike.er.R;
-import com.tezewike.er.utils.CustomJsonUtils;
+import com.tezewike.er.utils.Utilities;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -121,7 +116,7 @@ public class SteamFragment extends Fragment {
         ProgressDialog dialog = new ProgressDialog(getActivity());
         String LOG_TAG = FetchSteamData.class.getSimpleName();
 
-        CustomJsonUtils customJsonUtils = new CustomJsonUtils(getActivity());
+        Utilities utilities = new Utilities(getActivity());
         String steam_data_file = "steam_data.txt";
 
         private URL getSteamURL(String steamId) {
@@ -172,7 +167,7 @@ public class SteamFragment extends Fragment {
 
             if (!fromFile) {
                 // If this data wasn't from the file, write to the file.
-                customJsonUtils.writeToFile(steam_data_file, jsonData);
+                utilities.writeToFile(steam_data_file, jsonData);
             } else {
                 Log.v(LOG_TAG, "Data found. Attempting to parse json data.");
             }
@@ -231,7 +226,7 @@ public class SteamFragment extends Fragment {
             Log.v("doInBackgroundSteam","ran");
             URL jsonURL;
 
-            String data = customJsonUtils.readFromFile(steam_data_file);
+            String data = utilities.readFromFile(steam_data_file);
 
             if (!data.equals("")) {
                 try {
@@ -243,7 +238,7 @@ public class SteamFragment extends Fragment {
 
             // If the above failed, try to obtain data from the web
             jsonURL = getSteamURL(null);
-            data = customJsonUtils.getJsonString(jsonURL);
+            data = utilities.getJsonString(jsonURL);
             try {
                 return parseSteamJson(data, false);
             } catch (JSONException e) {

@@ -229,6 +229,33 @@ public class MovieDbHelper extends SQLiteOpenHelper {
         return false;
     }
 
+    public boolean isDetailAvailable(String param, int id) {
+        SQLiteDatabase sqLiteDatabase = this.getReadableDatabase();
+        String[] columns = {MovieEntry.GENRE};
+        String table;
+
+        if (param.equals(RECENT)) {
+            table = MovieEntry.TABLE_NAME_RECENT;
+        } else if (param.equals(POPULAR)) {
+            table = MovieEntry.TABLE_NAME_POPULAR;
+        } else {
+            return false;
+        }
+
+        // Only one column is checked for an entry
+        Cursor cursor = sqLiteDatabase.query(true, table, columns, null,
+                null, null, null, null, "1");
+
+        try {
+            cursor.getString(cursor.getColumnIndex(MovieEntry.GENRE));
+            cursor.close();
+            return true;
+        } catch (CursorIndexOutOfBoundsException e) {
+            return false;
+        }
+
+    }
+
     public String getCurrentDate() {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
         Date date = new Date();

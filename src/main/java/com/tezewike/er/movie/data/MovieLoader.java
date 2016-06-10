@@ -11,8 +11,7 @@ import android.support.v4.content.AsyncTaskLoader;
 import android.util.Log;
 
 import com.tezewike.er.BuildConfig;
-import com.tezewike.er.utils.AppNetwork;
-import com.tezewike.er.utils.CustomJsonUtils;
+import com.tezewike.er.utils.Utilities;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -25,24 +24,20 @@ import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.List;
 
-/**
- * Created by Tobe on 6/8/2016.
- */
+
 public class MovieLoader extends AsyncTaskLoader<Cursor> {
     String LOG_TAG = MovieLoader.class.getSimpleName();
     String TAB_TAG;
 
     Context context;
+    Utilities utilities;
+    MovieDbHelper movieSQLiteDb;
 
     int id;
     String param, currentTab;
     String RECENT_PARAM = "recent";
     String POPULAR_PARAM = "popular";
     String DETAIL_PARAM = "detail";
-
-    MovieDbHelper movieSQLiteDb;
-    AppNetwork appNetwork;
-    CustomJsonUtils customJsonUtils;
 
     Snackbar snackbar;
 
@@ -53,8 +48,7 @@ public class MovieLoader extends AsyncTaskLoader<Cursor> {
 
         this.TAB_TAG = param + " tab: ";
         this.movieSQLiteDb = new MovieDbHelper(context);
-        this.appNetwork = new AppNetwork(context);
-        this.customJsonUtils = new CustomJsonUtils(context);
+        this.utilities = new Utilities(context);
     }
 
     public MovieLoader(Context context, String parameter, String tab, int id) {
@@ -66,9 +60,7 @@ public class MovieLoader extends AsyncTaskLoader<Cursor> {
 
         this.TAB_TAG = param + " tab: ";
         this.movieSQLiteDb = new MovieDbHelper(context);
-        this.appNetwork = new AppNetwork(context);
-        this.customJsonUtils = new CustomJsonUtils(context);
-
+        this.utilities = new Utilities(context);
     }
 
     @Override
@@ -301,16 +293,22 @@ public class MovieLoader extends AsyncTaskLoader<Cursor> {
     }
 
     private boolean isOldInformation() {
-        try {
-            return movieSQLiteDb.compareDateInformation(param);
-        } catch (SQLiteException e) {
-            Log.v(LOG_TAG, "No table(s) currently exist.");
-            return false;
+        if (param.equals(RECENT_PARAM) || param.equals(POPULAR_PARAM)) {
+            try {
+                return movieSQLiteDb.compareDateInformation(param);
+            } catch (SQLiteException e) {
+                Log.v(LOG_TAG, "No table(s) currently exist.");
+                return false;
+            }
+        } else if (param.equals(DETAIL_PARAM)) {
+            return movieSQLiteDb.isDetailAvailable(currentTab, id);
         }
+
+        return false;
     }
 
     private boolean isAppConnected() {
-        return appNetwork.isNetworkAvailable();
+        return utilities.isNetworkAvailable();
     }
 
     private Cursor getRecentCursorData() {
@@ -324,7 +322,7 @@ public class MovieLoader extends AsyncTaskLoader<Cursor> {
 
         // If the above failed, try to obtain data from the web
         URL jsonURL = getRecentMoviesURL();
-        String data = customJsonUtils.getJsonString(jsonURL);
+        String data = utilities.getJsonString(jsonURL);
         try {
             return parseDiscoverMovieJson(data);
         } catch (JSONException e) {
@@ -346,7 +344,7 @@ public class MovieLoader extends AsyncTaskLoader<Cursor> {
 
         // If the above failed, try to obtain data from the web
         URL jsonURL = getPopularMoviesURL();
-        String data = customJsonUtils.getJsonString(jsonURL);
+        String data = utilities.getJsonString(jsonURL);
         try {
             return parseDiscoverMovieJson(data);
         } catch (JSONException e) {
@@ -358,10 +356,17 @@ public class MovieLoader extends AsyncTaskLoader<Cursor> {
     }
 
     private Cursor getMovieIDtCursorData() {
+        if (isOldInformation()) {
+            // If the information isn't new, end the process
+            Log.v(LOG_TAG, TAB_TAG + "Previous data found.");
+            return movieSQLiteDb.getInformation(currentTab, id);
+        } else {
+            Log.v(LOG_TAG, TAB_TAG + "Either old, or no, previous data found.");
+        }
 
         // If the above failed, try to obtain data from the web
         URL jsonURL = getMovieURLFromID(id);
-        String data = customJsonUtils.getJsonString(jsonURL);
+        String data = utilities.getJsonString(jsonURL);
         try {
             return parseMovieFromID(data);
         } catch (JSONException e) {

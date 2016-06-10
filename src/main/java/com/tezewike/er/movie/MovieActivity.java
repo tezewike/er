@@ -11,6 +11,7 @@ import android.support.v7.widget.Toolbar;
 import com.tezewike.er.R;
 import com.tezewike.er.utils.ViewPagerAdapter;
 
+
 public class MovieActivity extends AppCompatActivity
         implements MovieRecentFragment.OnMovieSelectedListener,
                    MoviePopularFragment.OnMovieSelectedListener {
@@ -54,13 +55,13 @@ public class MovieActivity extends AppCompatActivity
     }
 
     @Override
-    public void onMovieSelected(String id, String param) {
+    public void onMovieSelected(Integer id, String param) {
         Bundle bundle = new Bundle();
         bundle.putString("param", param);
         int layout;
 
         if (id != null) {
-            bundle.putString("movie", id);
+            bundle.putInt("movie", id);
             Fragment detailFragment = new MovieDetailFragment();
             detailFragment.setArguments(bundle);
 

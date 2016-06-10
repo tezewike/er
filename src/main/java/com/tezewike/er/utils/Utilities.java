@@ -1,7 +1,8 @@
 package com.tezewike.er.utils;
 
-import android.app.Activity;
 import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -13,18 +14,16 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-/**
- * Created by Tobe on 5/19/2016.
- */
-public class CustomJsonUtils extends Activity {
-    private Context context;
-    private String LOG_TAG = CustomJsonUtils.class.getSimpleName();
 
-    public CustomJsonUtils(Context context){
+public class Utilities {
+    private final String LOG_TAG = Utilities.class.getSimpleName();
+    private Context context;
+
+    public Utilities(Context context) {
         this.context = context;
     }
 
-    public void writeToFile(String file, String data) {
+    final public void writeToFile(String file, String data) {
         FileOutputStream outputStream ;
 
         try {
@@ -47,7 +46,7 @@ public class CustomJsonUtils extends Activity {
             if (inputStream != null) {
                 InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
                 BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-                String receiveString = "";
+                String receiveString;
                 StringBuilder stringBuilder = new StringBuilder();
 
                 while ((receiveString = bufferedReader.readLine()) != null) {
@@ -83,7 +82,7 @@ public class CustomJsonUtils extends Activity {
 
             // Read the input stream into a String
             InputStream inputStream = urlConnection.getInputStream();
-            StringBuffer buffer = new StringBuffer();
+            StringBuilder buffer = new StringBuilder();
             if (inputStream == null) {
                 // Nothing to do.
                 return null;
@@ -93,7 +92,7 @@ public class CustomJsonUtils extends Activity {
             String line;
             while ((line = reader.readLine()) != null) {
 
-                buffer.append(line + "\n");
+                buffer.append(line).append("\n");
             }
 
             if (buffer.length() == 0) {
@@ -120,6 +119,64 @@ public class CustomJsonUtils extends Activity {
         }
 
         return jsonStr;
+    }
+
+    public static String dateFormatter(String d) {
+        String MONTH_NAMES[] =  {"", "January", "February", "March", "April", "May", "June", "July",
+                "August", "September", "October", "November", "December"};
+        String[] date;
+        int month, day, year;
+        date = d.split("-");
+
+        try {
+            year = Integer.parseInt(date[0]);
+            month = Integer.parseInt(date[1]);
+            day = Integer.parseInt(date[2]);
+        } catch (NumberFormatException e) {
+            return null;
+        } catch (IndexOutOfBoundsException e) {
+            return null;
+        }
+
+        return MONTH_NAMES[month] + " " + day + ", " + year;
+    }
+
+    public boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager
+                = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+
+        return networkInfo != null && networkInfo.isConnected();
+    }
+
+    public boolean haveWifiConnection() {
+        boolean haveConnectedWifi = false;
+        ConnectivityManager connectivityManager =
+                (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo[] networkInfo = connectivityManager.getAllNetworkInfo();
+
+        for (NetworkInfo ni : networkInfo) {
+            if (ni.getTypeName().equalsIgnoreCase("WIFI"))
+                if (ni.isConnected())
+                    haveConnectedWifi = true;
+        }
+
+        return haveConnectedWifi;
+    }
+
+    public boolean haveMobileConnection() {
+        boolean haveConnectedMobile = false;
+        ConnectivityManager connectivityManager =
+                (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo[] networkInfo = connectivityManager.getAllNetworkInfo();
+
+        for (NetworkInfo ni : networkInfo) {
+            if (ni.getTypeName().equalsIgnoreCase("MOBILE"))
+                if (ni.isConnected())
+                    haveConnectedMobile = true;
+        }
+
+        return haveConnectedMobile;
     }
 
 }

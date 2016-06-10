@@ -19,11 +19,12 @@ import com.tezewike.er.R;
 import com.tezewike.er.movie.data.MovieContract;
 import com.tezewike.er.movie.data.MovieDbHelper;
 import com.tezewike.er.movie.data.MovieLoader;
+import com.tezewike.er.utils.Utilities;
 
 
 /**
  * A simple {@link Fragment} subclass.
- * Activities that contain this fragment must implement the
+ * Activities that contain this fragment must implement the listener interface
  */
 public class MovieDetailFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor> {
     private final String LOG_TAG = MovieDetailFragment.class.getSimpleName();
@@ -144,7 +145,8 @@ public class MovieDetailFragment extends Fragment implements LoaderManager.Loade
                 cursor.moveToFirst();
                 mTitle = cursor.getString(MovieContract.MovieEntry.INT_MOVIE_NAME);
                 mVote = cursor.getString(MovieContract.MovieEntry.INT_VOTE_AVERAGE);
-                mRelease = cursor.getString(MovieContract.MovieEntry.INT_RELEASE_DATE);
+                mRelease = Utilities.dateFormatter(
+                        cursor.getString(MovieContract.MovieEntry.INT_RELEASE_DATE));
                 mPoster = cursor.getString(MovieContract.MovieEntry.INT_POSTER_URL);
                 mBackdrop = cursor.getString(MovieContract.MovieEntry.INT_BACKDROP_URL);
                 mDescription = cursor.getString(MovieContract.MovieEntry.INT_DESCRIPTION);

@@ -9,7 +9,7 @@ import java.util.ArrayList;
 /**
  * Created by Tobe on 5/23/2016.
  */
-public class ViewPagerAdapter extends FragmentPagerAdapter {
+public final class ViewPagerAdapter extends FragmentPagerAdapter {
     ArrayList<Fragment> fragments = new ArrayList<>();
     ArrayList<String> tabTitles = new ArrayList<>();
 

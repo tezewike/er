@@ -68,7 +68,7 @@ public class ShuffleFragment extends Fragment {
             public void onClick(View v) {
                 MovieData[] selectedMovie = new MovieData[1];
                 selectedMovie[0] = movies.get(position[0]);
-                itemListener.onMovieSelected(""+position[0], parameter);
+                itemListener.onMovieSelected(position[0], parameter);
             }
         });
 

@@ -1,11 +1,11 @@
 package com.tezewike.er.movie;
 
 
-import android.app.Activity;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.CursorIndexOutOfBoundsException;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
@@ -28,22 +28,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-/**
- * A simple {@link Fragment} subclass.
- */
 public class MovieRecentFragment extends Fragment
         implements LoaderManager.LoaderCallbacks<Cursor> {
 
     private String LOG_TAG = MovieRecentFragment.class.getSimpleName();
     private final String TAB = "recent";
-    private final int LOADER_ID = 1;
 
-    private String lastClickedItem;
+    private Integer lastPosition;
     private OnMovieSelectedListener itemListener;
 
     private RecyclerView mRecyclerView;
     private RecyclerView.Adapter movieAdapter;
-    private RecyclerView.LayoutManager mLayoutManager;
 
     public MovieRecentFragment() {
         // Required empty public constructor
@@ -51,7 +46,7 @@ public class MovieRecentFragment extends Fragment
 
     // Container Activity must implement this interface
     public interface OnMovieSelectedListener {
-        void onMovieSelected(String cursorId, String param);
+        void onMovieSelected(Integer cursorId, String param);
     }
 
     @Override
@@ -109,9 +104,9 @@ public class MovieRecentFragment extends Fragment
         // Init recyclerView
         mRecyclerView = (RecyclerView) rootView.findViewById(R.id.movie_recyclerView);
 
-        // Create a GridView
+        // Create a grid layout
         int columns = 2;
-        mLayoutManager = new GridLayoutManager(getActivity(), columns);
+        RecyclerView.LayoutManager mLayoutManager = new GridLayoutManager(getActivity(), columns);
         mRecyclerView.setLayoutManager(mLayoutManager);
 
         // specify an adapter
@@ -119,32 +114,56 @@ public class MovieRecentFragment extends Fragment
         mRecyclerView.setAdapter(movieAdapter);
 
         // Must use forceLoad() when using support libraries
+        int LOADER_ID = 1;
         getActivity().getSupportLoaderManager().initLoader(LOADER_ID, null, this).forceLoad();
 
-/*      Button button = (Button) rootView.findViewById(R.id.shuffle_button);
-
-        button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                itemListener.onMovieSelected(null, param);
-            }
-        });
-*/
         return rootView;
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        try {
+            outState.putInt("popular_last_item", lastPosition);
+        } catch (NullPointerException e) {
+            // do nothing
+        }
+    }
+
+    @Override
+    public void onActivityCreated(Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        try {
+            lastPosition = savedInstanceState.getInt("popular_last_item");
+        } catch (NullPointerException e) {
+            // do nothing
+        }
+
     }
 
     @Override
     public void onStart() {
         super.onStart();
+
+        if (lastPosition != null) {
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mRecyclerView.scrollToPosition(lastPosition);
+                }
+            }, 100);
+        }
+
     }
 
     @Override
-    public void onAttach(Activity activity) {
-        super.onAttach(activity);
+    public void onAttach(Context context) {
+        super.onAttach(context);
+
         try {
-            itemListener = (OnMovieSelectedListener) activity;
+            itemListener = (OnMovieSelectedListener) context;
         } catch (ClassCastException e) {
-            throw new ClassCastException(activity.toString()
+            throw new ClassCastException(context.toString()
                     + " must implement OnMovieSelectedListener");
         }
 
@@ -176,10 +195,11 @@ public class MovieRecentFragment extends Fragment
 
             @Override
             public void onClick(View view) {
-                int position = getPosition();
-                lastClickedItem = ids.get(position);
-                Log.v(LOG_TAG, "id: " + lastClickedItem + " title: " + titles.get(position));
-                itemListener.onMovieSelected(lastClickedItem, TAB);
+                lastPosition = getLayoutPosition();
+
+                int itemId = Integer.parseInt(ids.get(lastPosition));
+                Log.v(LOG_TAG, "id: " + itemId + " title: " + titles.get(lastPosition));
+                itemListener.onMovieSelected(itemId, TAB);
             }
 
         }
