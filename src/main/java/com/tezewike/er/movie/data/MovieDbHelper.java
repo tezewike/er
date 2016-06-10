@@ -41,7 +41,12 @@ public class MovieDbHelper extends SQLiteOpenHelper {
                         MovieEntry.POSTER_URL   + " TEXT NOT NULL, " +
                         MovieEntry.BACKDROP_URL + " TEXT NOT NULL, " +
                         MovieEntry.DESCRIPTION  + " TEXT NOT NULL, " +
-                                  CREATION_DATE + " TEXT NOT NULL " +
+                        MovieEntry.ADULT_RATED  + " BOOLEAN, " +
+                        MovieEntry.GENRE        + " TEXT, " +
+                        MovieEntry.STATUS       + " TEXT, " +
+                        MovieEntry.RUNTIME      + " TEXT, " +
+                        MovieEntry.TAGLINE      + " TEXT, " +
+                        CREATION_DATE + " TEXT NOT NULL " +
                         " );";
 
         final String SQL_CREATE_POPULAR_MOVIE_TABLE =
@@ -53,6 +58,11 @@ public class MovieDbHelper extends SQLiteOpenHelper {
                         MovieEntry.POSTER_URL   + " TEXT NOT NULL, " +
                         MovieEntry.BACKDROP_URL + " TEXT NOT NULL, " +
                         MovieEntry.DESCRIPTION  + " TEXT NOT NULL, " +
+                        MovieEntry.ADULT_RATED  + " BOOLEAN, " +
+                        MovieEntry.GENRE        + " TEXT, " +
+                        MovieEntry.STATUS       + " TEXT, " +
+                        MovieEntry.RUNTIME      + " TEXT, " +
+                        MovieEntry.TAGLINE      + " TEXT, " +
                                   CREATION_DATE + " TEXT NOT NULL " +
                         " );";
 
@@ -79,7 +89,8 @@ public class MovieDbHelper extends SQLiteOpenHelper {
     }
 
     public void putInformation(String param, int id, String name,
-                               String vote, String release, String poster, String backdrop, String description) {
+                               String vote, String release, String poster, String backdrop,
+                               String description) {
         SQLiteDatabase sqLiteDatabase = this.getWritableDatabase();
         ContentValues contentValues = new ContentValues();
         long insertId;
@@ -102,12 +113,37 @@ public class MovieDbHelper extends SQLiteOpenHelper {
         contentValues.put(MovieEntry.DESCRIPTION, description);
         contentValues.put(CREATION_DATE, getCurrentDate());
 
-
         insertId = sqLiteDatabase.insert(table, null, contentValues);
 
     }
 
-    public Cursor getInformation(String param, String id) {
+    public void putInformation(String param, int id, boolean adult, String genre, String status, String runtime,
+                               String tagline) {
+        SQLiteDatabase sqLiteDatabase = this.getWritableDatabase();
+        ContentValues contentValues = new ContentValues();
+        long updateId;
+        String table;
+
+        if (param.equals(RECENT)) {
+            table = MovieEntry.TABLE_NAME_RECENT;
+        } else if (param.equals(POPULAR)) {
+            table = MovieEntry.TABLE_NAME_POPULAR;
+        } else {
+            Log.e(LOG_TAG, "Table with parameter \"" + param + "\" does not exist.");
+            return;
+        }
+
+        contentValues.put(MovieEntry.ADULT_RATED, adult);
+        contentValues.put(MovieEntry.GENRE, genre);
+        contentValues.put(MovieEntry.STATUS, status);
+        contentValues.put(MovieEntry.RUNTIME, runtime);
+        contentValues.put(MovieEntry.TAGLINE, tagline);
+
+        updateId = sqLiteDatabase.update(table, contentValues,
+                MovieEntry.ID + "=" + id, null);
+    }
+
+    public Cursor getInformation(String param) {
         SQLiteDatabase sqLiteDatabase = this.getReadableDatabase();
         String[] columns = {MovieEntry.ID, MovieEntry.MOVIE_NAME, MovieEntry.VOTE_AVERAGE,
                 MovieEntry.RELEASE_DATE, MovieEntry.POSTER_URL, MovieEntry.BACKDROP_URL,
@@ -123,13 +159,9 @@ public class MovieDbHelper extends SQLiteOpenHelper {
             return null;
         }
 
-        if (id != null) {
-            id = MovieEntry.ID + " = " + id;
-        }
-
         Cursor cursor = sqLiteDatabase.query(table, // Which table to read?
                 columns,  // columns - Which columns in specified table
-                id,       // selection - aka WHERE. Which rows to return. Null returns all rows
+                null,       // selection - aka WHERE. Which rows to return. Null returns all rows
                 null,     // selectionArgs
                 null,     // groupBy - aka GROUP BY.
                 null,     // having
@@ -138,10 +170,37 @@ public class MovieDbHelper extends SQLiteOpenHelper {
         return cursor;
     }
 
+    public Cursor getInformation(String param, int id) {
+        SQLiteDatabase sqLiteDatabase = this.getReadableDatabase();
+        String[] columns = {MovieEntry.ID, MovieEntry.MOVIE_NAME, MovieEntry.VOTE_AVERAGE,
+                MovieEntry.RELEASE_DATE, MovieEntry.POSTER_URL, MovieEntry.BACKDROP_URL,
+                MovieEntry.DESCRIPTION, MovieEntry.ADULT_RATED, MovieEntry.GENRE, MovieEntry.STATUS,
+                MovieEntry.RUNTIME, MovieEntry.TAGLINE};
+        String table;
+
+        if (param.equals(RECENT)) {
+            table = MovieEntry.TABLE_NAME_RECENT;
+        } else if (param.equals(POPULAR)) {
+            table = MovieEntry.TABLE_NAME_POPULAR;
+        } else {
+            Log.e(LOG_TAG, "Table with parameter \"" + param + "\" does not exist.");
+            return null;
+        }
+
+        Cursor cursor = sqLiteDatabase.query(table, // Which table to read?
+                columns,                    // columns - Which columns in specified table
+                MovieEntry.ID + " = " + id, // selection - aka WHERE. Which rows to return. Null returns all rows
+                null,                       // selectionArgs
+                null,                       // groupBy - aka GROUP BY.
+                null,                       // having
+                null);                      // orderBY - aka ORDER BY.
+
+        return cursor;
+    }
+
     public boolean compareDateInformation(String param) {
         SQLiteDatabase sqLiteDatabase = this.getReadableDatabase();
         String[] columns = {CREATION_DATE};
-        String rowToCheck = MovieEntry.ID + " = 1";
         String table;
 
         if (param.equals(RECENT)) {
@@ -153,8 +212,8 @@ public class MovieDbHelper extends SQLiteOpenHelper {
         }
 
         try {
-            Cursor cursor = sqLiteDatabase.query(table, columns, rowToCheck,
-                    null, null, null, null);
+            Cursor cursor = sqLiteDatabase.query(true, table, columns, null,
+                    null, null, null, null, "1");
             cursor.moveToFirst();
             String oldDate = cursor.getString(cursor.getColumnIndex(CREATION_DATE));
             String currentDate = this.getCurrentDate();

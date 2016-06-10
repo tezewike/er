@@ -1,7 +1,7 @@
 package com.tezewike.er.movie.data;
 
 
-import android.app.ProgressDialog;
+import android.app.Activity;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteException;
@@ -20,8 +20,10 @@ import org.json.JSONObject;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
+import java.util.List;
 
 /**
  * Created by Tobe on 6/8/2016.
@@ -31,17 +33,17 @@ public class MovieLoader extends AsyncTaskLoader<Cursor> {
     String TAB_TAG;
 
     Context context;
-    Cursor mCursor;
 
-    String param;
+    int id;
+    String param, currentTab;
     String RECENT_PARAM = "recent";
     String POPULAR_PARAM = "popular";
+    String DETAIL_PARAM = "detail";
 
     MovieDbHelper movieSQLiteDb;
     AppNetwork appNetwork;
     CustomJsonUtils customJsonUtils;
 
-    ProgressDialog progressDialog;
     Snackbar snackbar;
 
     public MovieLoader(Context context, String parameter) {
@@ -53,81 +55,45 @@ public class MovieLoader extends AsyncTaskLoader<Cursor> {
         this.movieSQLiteDb = new MovieDbHelper(context);
         this.appNetwork = new AppNetwork(context);
         this.customJsonUtils = new CustomJsonUtils(context);
-//        this.progressDialog = new ProgressDialog(context);
-//        this.snackbar = Snackbar.make(context.getWindow().getDecorView().getRootView(),
-//                "Connection not active...", Snackbar.LENGTH_LONG);
+    }
+
+    public MovieLoader(Context context, String parameter, String tab, int id) {
+        super(context);
+        this.context = context;
+        this.param = parameter;
+        this.currentTab = tab;
+        this.id = id;
+
+        this.TAB_TAG = param + " tab: ";
+        this.movieSQLiteDb = new MovieDbHelper(context);
+        this.appNetwork = new AppNetwork(context);
+        this.customJsonUtils = new CustomJsonUtils(context);
+
     }
 
     @Override
     public Cursor loadInBackground() {
-        if (getData()) {
-            mCursor = movieSQLiteDb.getInformation(param, null);
-            return mCursor;
+        Log.v(LOG_TAG, TAB_TAG + "loadInBackground: Running...");
+
+        if (!isAppConnected()) {
+            snackbar = Snackbar.make(((Activity) context).getWindow().getDecorView().getRootView(),
+                    "Not connected...", Snackbar.LENGTH_INDEFINITE);
+            snackbar.show();
+            return null;
+        }
+
+        if (param.equals(DETAIL_PARAM)) {
+            return getMovieIDtCursorData();
+        } else if (param.equals(RECENT_PARAM)) {
+            return getRecentCursorData();
+        } else if (param.equals(POPULAR_PARAM)) {
+            return getPopularCursorData();
         } else {
             return null;
         }
-    }
-
-/*    @Override
-    protected void onPreExecute() {
-        if (!isAppConnected()) {
-            snackbar.show();
-            cancel(true);
-        } else {
-            progressDialog.setMessage("Loading Movie List");
-            progressDialog.setCancelable(false);
-            progressDialog.setInverseBackgroundForced(false);
-            progressDialog.show();
-        }
-    }
-
-    @Override
-    protected Boolean doInBackground(String... params) {
-        Log.v(LOG_TAG, TAB_TAG + "doInBackground: Running...");
-
-        if (isOldInformation()) {
-            // If the information isn't new, end the process
-            Log.v(LOG_TAG, TAB_TAG + "Previous data found.");
-            return true;
-        } else {
-            Log.v(LOG_TAG, TAB_TAG + "Either old, or no, previous data found.");
-        }
-
-        // If the above failed, try to obtain data from the web
-        URL jsonURL;
-        if (params[0].equals(RECENT_PARAM)) {
-            jsonURL = getRecentMoviesURL();
-        } else if (params[0].equals(POPULAR_PARAM)) {
-            jsonURL = getPopularMoviesURL();
-        } else {
-            return false;
-        }
-
-        String data = customJsonUtils.getJsonString(jsonURL);
-        try {
-            return parseMovieJson(data);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-        // If all the above methods failed, return false
-        return false;
-    }
-
-    @Override
-    protected void onPostExecute(Boolean results) {
-        Log.v(LOG_TAG, TAB_TAG + "onPostExecute: Finishing tasks...");
-
-        if (results != null) {
-            mCursor = movieSQLiteDb.getInformation(param, null);
-            movieSQLiteDb.close();
-        }
-
-        // End the Loading dialogLoad box
-        progressDialog.dismiss();
 
     }
-*/
+
     private String[] getTimes(int wks) {
 
         Calendar time = GregorianCalendar.getInstance();
@@ -222,6 +188,29 @@ public class MovieLoader extends AsyncTaskLoader<Cursor> {
         return url;
     }
 
+    private URL getMovieURLFromID(int id) {
+        final String BASE_URL = "https://api.themoviedb.org/3/movie/" + id + "?";
+        final String API_PARAM = "api_key";
+        String apiKey = BuildConfig.TMDB_API_KEY;
+
+        // Build the url
+        Uri uri = Uri.parse(BASE_URL).buildUpon()
+                .appendQueryParameter(API_PARAM, apiKey)
+                .build();
+
+        // Attempt to create url
+        URL url;
+        try {
+            url = new URL(uri.buildUpon().toString());
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+            return null;
+        }
+
+        return url;
+
+    }
+
     private String getImageURL(String urlPath, boolean poster) {
         String base = "http://image.tmdb.org/t/p/w";
         String width;
@@ -240,16 +229,17 @@ public class MovieLoader extends AsyncTaskLoader<Cursor> {
         return base + width + urlPath;
     }
 
-    private boolean parseMovieJson(String jsonData) throws JSONException {
+    private Cursor parseDiscoverMovieJson(String jsonData) throws JSONException {
 
         if (jsonData == null) {
-            return false;
+            return null;
         }
 
         JSONObject data = new JSONObject(jsonData);
 
         // Names of key Json elements that can be extracted
         final String LIST = "results";
+        final String ID = "id";
         final String TITLE = "original_title";
         final String IMAGE = "poster_path";
         final String BACKDROP = "backdrop_path";
@@ -263,7 +253,8 @@ public class MovieLoader extends AsyncTaskLoader<Cursor> {
         for (int i = 0; i < moviesJSON.length(); i++) {
             JSONObject movie = moviesJSON.getJSONObject(i);
 
-            movieSQLiteDb.putInformation(param, i,
+            movieSQLiteDb.putInformation(param,
+                    Integer.parseInt(movie.getString(ID)),
                     movie.getString(TITLE),
                     movie.getString(VOTE),
                     movie.getString(RELEASE),
@@ -275,8 +266,38 @@ public class MovieLoader extends AsyncTaskLoader<Cursor> {
         }
 
         Log.e(LOG_TAG, TAB_TAG + "Data inserted into table.");
+        return movieSQLiteDb.getInformation(param);
+    }
 
-        return true;
+    private Cursor parseMovieFromID(String jsonData) throws JSONException {
+
+        if (jsonData == null) {
+            return null;
+        }
+
+        JSONObject movie = new JSONObject(jsonData);
+
+        // Names of key Json elements that can be extracted
+        final String ADULT = "adult";
+        final String GENRE = "genres";
+        final String GENRE_NAME = "name";
+        final String STATUS = "status";
+        final String RUNTIME = "runtime";
+        final String TAGLINE = "tagline";
+
+        boolean adult = Boolean.parseBoolean(movie.getString(ADULT));
+        JSONArray genres = movie.getJSONArray(GENRE);
+        List<String> genre_names =  new ArrayList<>();
+        for (int i = 0; i < genres.length(); i++) {
+            genre_names.add(genres.getJSONObject(i).getString(GENRE_NAME));
+        }
+        String status = movie.getString(STATUS);
+        String run = movie.getString(RUNTIME);
+        String tag = movie.getString(TAGLINE);
+        movieSQLiteDb.putInformation(currentTab, id, adult, genre_names.get(0), status,
+                run, tag);
+
+        return movieSQLiteDb.getInformation(currentTab, id);
     }
 
     private boolean isOldInformation() {
@@ -292,40 +313,63 @@ public class MovieLoader extends AsyncTaskLoader<Cursor> {
         return appNetwork.isNetworkAvailable();
     }
 
-    public Cursor getCursor() {
-        return mCursor;
-    }
-
-    public boolean getData() {
-        Log.v(LOG_TAG, TAB_TAG + "doInBackground: Running...");
-
+    private Cursor getRecentCursorData() {
         if (isOldInformation()) {
             // If the information isn't new, end the process
             Log.v(LOG_TAG, TAB_TAG + "Previous data found.");
-            return true;
+            return movieSQLiteDb.getInformation(param);
         } else {
             Log.v(LOG_TAG, TAB_TAG + "Either old, or no, previous data found.");
         }
 
         // If the above failed, try to obtain data from the web
-        URL jsonURL;
-        if (param.equals(RECENT_PARAM)) {
-            jsonURL = getRecentMoviesURL();
-        } else if (param.equals(POPULAR_PARAM)) {
-            jsonURL = getPopularMoviesURL();
-        } else {
-            return false;
-        }
-
+        URL jsonURL = getRecentMoviesURL();
         String data = customJsonUtils.getJsonString(jsonURL);
         try {
-            return parseMovieJson(data);
+            return parseDiscoverMovieJson(data);
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
-        // If all the above methods failed, return false
-        return false;
+        // If all the above methods failed, return null
+        return null;
+    }
+
+    private Cursor getPopularCursorData() {
+        if (isOldInformation()) {
+            // If the information isn't new, end the process
+            Log.v(LOG_TAG, TAB_TAG + "Previous data found.");
+            return movieSQLiteDb.getInformation(param);
+        } else {
+            Log.v(LOG_TAG, TAB_TAG + "Either old, or no, previous data found.");
+        }
+
+        // If the above failed, try to obtain data from the web
+        URL jsonURL = getPopularMoviesURL();
+        String data = customJsonUtils.getJsonString(jsonURL);
+        try {
+            return parseDiscoverMovieJson(data);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        // If all the above methods failed, return null
+        return null;
+    }
+
+    private Cursor getMovieIDtCursorData() {
+
+        // If the above failed, try to obtain data from the web
+        URL jsonURL = getMovieURLFromID(id);
+        String data = customJsonUtils.getJsonString(jsonURL);
+        try {
+            return parseMovieFromID(data);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        // If all the above methods failed, return null
+        return null;
     }
 
 }

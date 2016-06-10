@@ -42,7 +42,7 @@ public class ShuffleFragment extends Fragment {
         super.onCreate(savedInstanceState);
         Bundle data = getArguments();
         // Get movie data from bundle
-        String id = data.getString("movie");
+        int id = Integer.parseInt(data.getString("movie"));
         parameter = data.getString("param");
 
         mCursor = movieSQLDb.getInformation(parameter, id);

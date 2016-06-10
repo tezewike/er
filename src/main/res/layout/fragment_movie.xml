@@ -1,5 +1,4 @@
-<RelativeLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:scrollbars="none"
@@ -10,6 +9,7 @@
         android:id="@+id/movie_recyclerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:padding="2dp"
         android:stretchMode="columnWidth"
         android:gravity="center" />
 

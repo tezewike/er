@@ -22,7 +22,6 @@ import android.widget.TextView;
 import com.squareup.picasso.Picasso;
 import com.tezewike.er.R;
 import com.tezewike.er.movie.data.MovieContract;
-import com.tezewike.er.movie.data.MovieData;
 import com.tezewike.er.movie.data.MovieLoader;
 
 import java.util.ArrayList;
@@ -122,10 +121,6 @@ public class MovieRecentFragment extends Fragment
         // Must use forceLoad() when using support libraries
         getActivity().getSupportLoaderManager().initLoader(LOADER_ID, null, this).forceLoad();
 
-        if (lastClickedItem != null) {
-            mLayoutManager.scrollToPosition(Integer.parseInt(lastClickedItem));
-        }
-
 /*      Button button = (Button) rootView.findViewById(R.id.shuffle_button);
 
         button.setOnClickListener(new View.OnClickListener() {
@@ -163,7 +158,7 @@ public class MovieRecentFragment extends Fragment
 
     class RecentMovieAdapter extends RecyclerView.Adapter<RecentMovieAdapter.ViewHolder> {
         protected Context mContext;
-        protected List<MovieData> mMovies = new ArrayList<>();
+        protected List<String> ids, titles, posters;
 
         public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
 
@@ -182,7 +177,8 @@ public class MovieRecentFragment extends Fragment
             @Override
             public void onClick(View view) {
                 int position = getPosition();
-                lastClickedItem = "" + position;
+                lastClickedItem = ids.get(position);
+                Log.v(LOG_TAG, "id: " + lastClickedItem + " title: " + titles.get(position));
                 itemListener.onMovieSelected(lastClickedItem, TAB);
             }
 
@@ -190,8 +186,9 @@ public class MovieRecentFragment extends Fragment
 
         public RecentMovieAdapter(Context c, Cursor movieCursor) {
             this.mContext = c;
+            clearLists();
             if (movieCursor != null) {
-                this.mMovies = getMovieData(movieCursor);
+                addMovieDataToLists(movieCursor);
             }
         }
 
@@ -206,10 +203,9 @@ public class MovieRecentFragment extends Fragment
 
         @Override
         public void onBindViewHolder(ViewHolder holder, int position) {
-            MovieData movie = mMovies.get(position);
-            String url = movie.poster;
+            String url = posters.get(position);
 
-            holder.movieTitle.setText(movie.title);
+            holder.movieTitle.setText(titles.get(position));
             Picasso.with(mContext).load(url)
                     .placeholder(R.drawable.placeholder_poster)
                     .error(R.drawable.placeholder_poster)
@@ -219,40 +215,31 @@ public class MovieRecentFragment extends Fragment
 
         @Override
         public int getItemCount() {
-            return mMovies.size();
+            return titles.size();
         }
 
-        private List<MovieData> getMovieData(Cursor cursor) {
-
-            List<MovieData> list = new ArrayList<>();
-            int i = 0;
+        private void addMovieDataToLists(Cursor cursor) {
 
             try {
                 cursor.moveToFirst();
                 do {
-                    list.add( new MovieData(
-                                    cursor.getString(MovieContract.MovieEntry.INT_MOVIE_NAME),
-                                    cursor.getString(MovieContract.MovieEntry.INT_POSTER_URL),
-                                    cursor.getString(MovieContract.MovieEntry.INT_BACKDROP_URL),
-                                    cursor.getString(MovieContract.MovieEntry.INT_DESCRIPTION),
-                                    cursor.getString(MovieContract.MovieEntry.INT_RELEASE_DATE),
-                                    cursor.getString(MovieContract.MovieEntry.INT_VOTE_AVERAGE)
-                            )
-                    );
-                    i++;
+                    ids.add(cursor.getString(MovieContract.MovieEntry.INT_ID));
+                    titles.add(cursor.getString(MovieContract.MovieEntry.INT_MOVIE_NAME));
+                    posters.add(cursor.getString(MovieContract.MovieEntry.INT_POSTER_URL));
                 } while (cursor.moveToNext());
 
             } catch (NullPointerException npe) {
-                Log.e(LOG_TAG, "NullPointerException while generating "+ i +" items");
-                return list;
+                Log.e(LOG_TAG, "NullPointerException while generating items");
             } catch (CursorIndexOutOfBoundsException e) {
-                Log.e(LOG_TAG, "CursorIndexOutOfBoundsException while generating "+ i +" items");
+                Log.e(LOG_TAG, "CursorIndexOutOfBoundsException while generating items");
                 cursor.close();
-                return list;
             }
+        }
 
-            Log.v(LOG_TAG, i + " items generated from cursor.");
-            return list;
+        private void clearLists() {
+            ids = new ArrayList<>();
+            titles = new ArrayList<>();
+            posters = new ArrayList<>();
         }
 
     }
