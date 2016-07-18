@@ -13,4 +13,10 @@
     <dimen name="poster_height">275dp</dimen>
     <dimen name="poster_width">185dp</dimen>
 
+    <!-- Text Sizes -->
+    <dimen name="text_size_small">15sp</dimen>
+    <dimen name="text_size_medium">20sp</dimen>
+    <dimen name="text_size_large">25sp</dimen>
+    <dimen name="text_size_xlarge">30sp</dimen>
+
 </resources>

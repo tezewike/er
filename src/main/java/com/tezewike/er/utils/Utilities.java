@@ -141,6 +141,30 @@ public class Utilities {
         return MONTH_NAMES[month] + " " + day + ", " + year;
     }
 
+    public static String minutesConvert(String minutes) {
+        int m, h;
+
+        try {
+            int x = Integer.parseInt(minutes);
+            m = x / 60;
+            h = x % 60;
+        } catch (NumberFormatException e) {
+            return "";
+        }
+
+        String min = "";
+        String hour = "";
+
+        if (h != 0) {
+            hour = h+"h ";
+        }
+        if (m != 0) {
+            min = m+"m";
+        }
+
+        return hour+min;
+    }
+
     public boolean isNetworkAvailable() {
         ConnectivityManager connectivityManager
                 = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);

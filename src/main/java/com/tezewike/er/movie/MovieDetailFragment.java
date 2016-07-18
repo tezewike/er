@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
+import android.support.v7.widget.CardView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -49,7 +50,7 @@ public class MovieDetailFragment extends Fragment implements LoaderManager.Loade
 
         try {
             Bundle data = getArguments();
-            movieId = Integer.parseInt(data.getString("movie"));
+            movieId = data.getInt("movie");
             TAB = data.getString("param");
             movieSQLDb = new MovieDbHelper(getActivity());
             mCursor = movieSQLDb.getInformation(TAB, movieId);
@@ -99,9 +100,11 @@ public class MovieDetailFragment extends Fragment implements LoaderManager.Loade
         public class ViewHolder {
             TextView title, vote, release, description, genre, status, runtime, tagline;
             final ImageView backdrop, poster;
-
+            final CardView card;
 
             public ViewHolder(View v) {
+                card = (CardView) v.findViewById(R.id.detail_cardView);
+
                 title = (TextView) v.findViewById(R.id.movie_detail_title);
                 description = (TextView) v.findViewById(R.id.movie_detail_descript);
                 backdrop = (ImageView) v.findViewById(R.id.movie_detail_backdrop);
@@ -110,15 +113,19 @@ public class MovieDetailFragment extends Fragment implements LoaderManager.Loade
                 tagline = (TextView) v.findViewById(R.id.movie_detail_tagline);
                 vote = (TextView) v.findViewById(R.id.movie_detail_vote);
                 release = (TextView) v.findViewById(R.id.movie_detail_release);
-                genre = (TextView) v.findViewById(R.id.movie_detail_genre);
+            //    genre = (TextView) v.findViewById(R.id.movie_detail_genre);
                 runtime = (TextView) v.findViewById(R.id.movie_detail_runtime);
             }
         }
 
         public DetailViewChanger(View view, Cursor cursor) {
             this.viewHolder = new ViewHolder(view);
+
             if (cursor != null) {
+                viewHolder.card.setVisibility(View.VISIBLE);
                 addMovieDataToVariables(cursor);
+            } else {
+                viewHolder.card.setVisibility(View.GONE);
             }
         }
 
@@ -133,7 +140,7 @@ public class MovieDetailFragment extends Fragment implements LoaderManager.Loade
             viewHolder.release.setText(mRelease);
             viewHolder.tagline.setText(mTagline);
             viewHolder.runtime.setText(mRuntime);
-            viewHolder.genre.setText(mGenre);
+//            viewHolder.genre.setText(mGenre);
             viewHolder.vote.setText(mVote);
             viewHolder.description.setText(mDescription);
 
@@ -150,9 +157,10 @@ public class MovieDetailFragment extends Fragment implements LoaderManager.Loade
                 mPoster = cursor.getString(MovieContract.MovieEntry.INT_POSTER_URL);
                 mBackdrop = cursor.getString(MovieContract.MovieEntry.INT_BACKDROP_URL);
                 mDescription = cursor.getString(MovieContract.MovieEntry.INT_DESCRIPTION);
-                mGenre = cursor.getString(MovieContract.MovieEntry.INT_GENRE);
+//                mGenre = cursor.getString(MovieContract.MovieEntry.INT_GENRE);
                 mStatus = cursor.getString(MovieContract.MovieEntry.INT_STATUS);
-                mRuntime = cursor.getString(MovieContract.MovieEntry.INT_RUNTIME);
+                mRuntime = Utilities.minutesConvert(
+                        cursor.getString(MovieContract.MovieEntry.INT_RUNTIME));
                 mTagline = cursor.getString(MovieContract.MovieEntry.INT_TAGLINE);
 
             } catch (NullPointerException npe) {
